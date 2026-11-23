@@ -80,6 +80,8 @@ fn apple_login_diagnostic(details: &str) -> Option<&'static str> {
         && details.contains("SMS 2FA request failed with http status 403:")
     {
         Some("Apple rejected the request to send an SMS verification code (HTTP 403). No new code was confirmed. Avoid repeated SMS requests.")
+    } else if details.contains("Failed to complete trusted device 2FA") {
+        Some("Apple requested SMS verification, so iLoader tried trusted-device approval without sending an SMS. Apple rejected that request. Sign in to this Apple ID in iPhone Settings or the App Store, then try again.")
     } else if details.contains("Failed to send initial login request")
         && details.contains("503 Service Temporarily Unavailable")
     {
@@ -100,6 +102,8 @@ mod tests {
         assert!(sms.contains("HTTP 403"));
         assert!(!sms.contains("synthetic response"));
         assert!(service.contains("HTTP 503"));
+        let trusted = apple_login_diagnostic("Failed to complete trusted device 2FA").unwrap();
+        assert!(trusted.contains("without sending an SMS"));
         assert_eq!(apple_login_diagnostic("Failed to send initial login request\nHTTP 403"), None);
     }
 }
