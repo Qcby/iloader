@@ -11,6 +11,7 @@ import { Certificate } from "./pages/Certificates";
 import { useTranslation } from "react-i18next";
 
 const storePromise = load("data.json");
+const resendTrustedDeviceCode = "__iloader_resend_trusted_device__";
 
 export const AppleID = ({
   loggedInAs,
@@ -289,6 +290,17 @@ export const AppleID = ({
             style={{ marginRight: "0.5em" }}
           />
           <button type="submit">{t("apple_id.submit")}</button>
+          <button
+            type="button"
+            className="action-button"
+            onClick={async () => {
+              await emit("2fa-recieved", resendTrustedDeviceCode);
+              setTfaOpen(false);
+              setTfaCode("");
+            }}
+          >
+            {t("apple_id.resend_trusted_device")}
+          </button>
         </form>
       </Modal>
       <Modal sizeFit isOpen={certs !== null} zIndex={2000}>

@@ -19,6 +19,7 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: bun run build
       - run: cargo test --release --locked --manifest-path src-tauri/Cargo.toml --lib separates_sms_rejection_from_initial_service_outage
+      - run: cargo test --release --locked --manifest-path src-tauri/Cargo.toml --lib resend_button_requests_device_notification_not_sms
       - run: cargo test --release --locked --manifest-path src-tauri/vendor/isideload/Cargo.toml --lib sms_required_state_routes_to_trusted_device_without_sending_sms
       - run: bun run tauri build --no-bundle --config src-tauri/ci.conf.json -- --locked
       - uses: actions/upload-artifact@v7

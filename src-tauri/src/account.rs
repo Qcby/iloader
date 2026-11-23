@@ -23,6 +23,17 @@ use tauri::{AppHandle, Emitter, Listener, State, Window};
 use tauri_plugin_store::StoreExt;
 use tracing::debug;
 
+const RESEND_TRUSTED_DEVICE_CODE: &str = "__iloader_resend_trusted_device__";
+
+fn two_factor_callback_response(value: String) -> TwoFactorCallbackResponse {
+    let value = value.trim_matches('"');
+    if value == RESEND_TRUSTED_DEVICE_CODE {
+        TwoFactorCallbackResponse::ResendCode
+    } else {
+        TwoFactorCallbackResponse::SubmitCode(value.to_string())
+    }
+}
+
 use crate::{
     error::AppError,
     secure_storage::create_sideloading_storage,
@@ -185,8 +196,7 @@ async fn login(
                 let result = rx.recv_timeout(Duration::from_secs(120))?;
                 window_clone.unlisten(handler_id);
 
-                let code = result.trim_matches('"').to_string();
-                Ok(TwoFactorCallbackResponse::SubmitCode(code))
+                Ok(two_factor_callback_response(result))
             }
             .boxed()
         }
@@ -265,6 +275,24 @@ async fn login(
     debug!("Built sideloader");
 
     Ok(sideloader)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{RESEND_TRUSTED_DEVICE_CODE, two_factor_callback_response};
+    use isideload::auth::apple_account::TwoFactorCallbackResponse;
+
+    #[test]
+    fn resend_button_requests_device_notification_not_sms() {
+        assert!(matches!(
+            two_factor_callback_response(RESEND_TRUSTED_DEVICE_CODE.into()),
+            TwoFactorCallbackResponse::ResendCode
+        ));
+        assert!(matches!(
+            two_factor_callback_response("123456".into()),
+            TwoFactorCallbackResponse::SubmitCode(code) if code == "123456"
+        ));
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

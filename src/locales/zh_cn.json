@@ -74,6 +74,7 @@
     "verification_placeholder": "验证码...",
     "valid_6digit": "请输入有效的 6 位数字验证码。",
     "submit": "提交",
+    "resend_trusted_device": "重发受信任设备通知",
     "max_certs_title": "已达到证书数量上限",
     "max_certs_desc": "iloader 将撤销您现有的证书并生成一个新的。",
     "hide_certificate_list": "隐藏证书列表",
