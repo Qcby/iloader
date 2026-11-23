@@ -91,11 +91,8 @@ pub struct SMSTwoFactorError {
 enum SmsSendOutcome {
     Sent,
     ActiveChallenge,
+    ManualCodeRequired { status: u16 },
     ServiceError(SMSTwoFactorError),
-}
-
-fn trusted_device_fallback_for_sms_request() -> LoginState {
-    LoginState::NeedsDevice2FA
 }
 
 #[derive(Deserialize)]
@@ -262,9 +259,8 @@ impl AppleAccount {
                         }
                     }
                 }
-                LoginState::NeedsSMS2FA(_) => {
-                    info!("SMS 2FA requested; trying trusted-device verification instead");
-                    self.login_state = trusted_device_fallback_for_sms_request();
+                LoginState::NeedsSMS2FA(id) => {
+                    self.login_state = self.send_sms_2fa(id).await?;
                 }
                 LoginState::NeedsSMS2FAVerification(id) => {
                     let response = two_factor_callback(TwoFactorCallbackParams {
@@ -502,6 +498,17 @@ impl AppleAccount {
             SmsSendOutcome::ActiveChallenge => {
                 info!("SMS 2FA challenge already active, proceeding to verification");
             }
+            SmsSendOutcome::ManualCodeRequired { status } => {
+                warn!(
+                    "Apple rejected the SMS request with HTTP {}; allowing an externally obtained code",
+                    status
+                );
+                self.last_error = Some(format!(
+                    "Apple rejected iLoader's SMS request (HTTP {}). No SMS was confirmed. Request a code through Apple and enter it here.",
+                    status
+                ));
+                return Ok(LoginState::NeedsSMS2FAVerification(id));
+            }
             SmsSendOutcome::ServiceError(error) => {
                 if error.code == "-28248" {
                     warn!("{} - {}", error.title, error.message);
@@ -594,7 +601,14 @@ impl AppleAccount {
         }
 
         if let Some(error) = Self::parse_sms_service_error(text) {
+            if status == 403 && error.code != "-28248" {
+                return Ok(SmsSendOutcome::ManualCodeRequired { status });
+            }
             return Ok(SmsSendOutcome::ServiceError(error));
+        }
+
+        if status == 403 {
+            return Ok(SmsSendOutcome::ManualCodeRequired { status });
         }
 
         if status == 412
@@ -1120,13 +1134,13 @@ impl AppleAccount {
 
 #[cfg(test)]
 mod sms_fallback_tests {
-    use super::{LoginState, trusted_device_fallback_for_sms_request};
+    use super::{SmsSendOutcome, AppleAccount};
 
     #[test]
-    fn sms_required_state_routes_to_trusted_device_without_sending_sms() {
+    fn rejected_sms_request_allows_manual_code_entry_without_claiming_sms_sent() {
         assert!(matches!(
-            trusted_device_fallback_for_sms_request(),
-            LoginState::NeedsDevice2FA
+            AppleAccount::classify_sms_send_response(403, "Forbidden", 1).unwrap(),
+            SmsSendOutcome::ManualCodeRequired { status: 403 }
         ));
     }
 }

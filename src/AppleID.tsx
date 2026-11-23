@@ -29,6 +29,7 @@ export const AppleID = ({
   const [passwordInput, setPasswordInput] = useState<string>("");
   const [saveCredentials, setSaveCredentials] = useState<boolean>(false);
   const [tfaOpen, setTfaOpen] = useState<boolean>(false);
+  const [tfaSms, setTfaSms] = useState<boolean>(false);
   const [tfaCode, setTfaCode] = useState<string>("");
   const [addAccountOpen, setAddAccountOpen] = useState<boolean>(false);
   const [anisetteServer] = useStore<string>(
@@ -65,9 +66,13 @@ export const AppleID = ({
   useEffect(() => {
     if (!listenerAdded.current) {
       (async () => {
-        const unlistenFn = await listen("2fa-required", () => {
-          setTfaOpen(true);
-        });
+        const unlistenFn = await listen<{ sms: boolean }>(
+          "2fa-required",
+          (event) => {
+            setTfaSms(event.payload.sms);
+            setTfaOpen(true);
+          },
+        );
         unlisten.current = unlistenFn;
       })();
       listenerAdded.current = true;
@@ -269,7 +274,11 @@ export const AppleID = ({
       </div>
       <Modal sizeFit isOpen={tfaOpen} zIndex={2000}>
         <h2>{t("apple_id.two_factor_title")}</h2>
-        <p>{t("apple_id.two_factor_prompt")}</p>
+        <p>
+          {tfaSms
+            ? t("apple_id.two_factor_sms_prompt")
+            : t("apple_id.two_factor_prompt")}
+        </p>
         <form
           onSubmit={async (e) => {
             e.preventDefault();
@@ -290,17 +299,19 @@ export const AppleID = ({
             style={{ marginRight: "0.5em" }}
           />
           <button type="submit">{t("apple_id.submit")}</button>
-          <button
-            type="button"
-            className="action-button"
-            onClick={async () => {
-              await emit("2fa-recieved", resendTrustedDeviceCode);
-              setTfaOpen(false);
-              setTfaCode("");
-            }}
-          >
-            {t("apple_id.resend_trusted_device")}
-          </button>
+          {!tfaSms && (
+            <button
+              type="button"
+              className="action-button"
+              onClick={async () => {
+                await emit("2fa-recieved", resendTrustedDeviceCode);
+                setTfaOpen(false);
+                setTfaCode("");
+              }}
+            >
+              {t("apple_id.resend_trusted_device")}
+            </button>
+          )}
         </form>
       </Modal>
       <Modal sizeFit isOpen={certs !== null} zIndex={2000}>

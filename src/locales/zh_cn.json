@@ -71,6 +71,7 @@
     "login": "登录",
     "two_factor_title": "双重认证",
     "two_factor_prompt": "请输入发送到您设备的验证码。",
+    "two_factor_sms_prompt": "iLoader 未能请求发送短信。请在 Apple 官网请求验证码，然后在此输入收到的 6 位验证码。",
     "verification_placeholder": "验证码...",
     "valid_6digit": "请输入有效的 6 位数字验证码。",
     "submit": "提交",

@@ -72,6 +72,7 @@
     "login": "Login",
     "two_factor_title": "Two-Factor Authentication",
     "two_factor_prompt": "Please enter the verification code sent to your device.",
+    "two_factor_sms_prompt": "iLoader could not request an SMS. Request a code on Apple's website, then enter the 6-digit code here.",
     "verification_placeholder": "Verification Code...",
     "valid_6digit": "Please enter a valid 6-digit code.",
     "submit": "Submit",
