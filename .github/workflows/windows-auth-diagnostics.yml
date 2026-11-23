@@ -1,0 +1,27 @@
+name: Windows auth diagnostics
+on:
+  push:
+    branches: [windows-auth-diagnostics]
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: ilammy/msvc-dev-cmd@v1
+      - run: choco install strawberryperl make --no-progress -y
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bun run build
+      - run: cargo test --release --locked --manifest-path src-tauri/Cargo.toml --lib separates_sms_rejection_from_initial_service_outage
+      - run: bun run tauri build --no-bundle --config src-tauri/ci.conf.json -- --locked
+      - uses: actions/upload-artifact@v7
+        with:
+          name: iloader-windows-x64-auth-diagnostics
+          path: src-tauri/target/release/iloader.exe
+          if-no-files-found: error

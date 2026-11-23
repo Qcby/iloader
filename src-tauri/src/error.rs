@@ -68,6 +68,42 @@ impl Serialize for AppError {
 }
 
 // from rootcause report
+pub(crate) fn apple_login_error(report: Report) -> AppError {
+    match apple_login_diagnostic(&report.to_string()) {
+        Some(message) => AppError::Misc(message.into()),
+        None => report.into(),
+    }
+}
+
+fn apple_login_diagnostic(details: &str) -> Option<&'static str> {
+    if details.contains("Failed to complete SMS 2FA")
+        && details.contains("SMS 2FA request failed with http status 403:")
+    {
+        Some("Apple rejected the request to send an SMS verification code (HTTP 403). No new code was confirmed. Avoid repeated SMS requests.")
+    } else if details.contains("Failed to send initial login request")
+        && details.contains("503 Service Temporarily Unavailable")
+    {
+        Some("The Apple sign-in service returned HTTP 503 before two-factor verification. Wait before trying again.")
+    } else {
+        None
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::apple_login_diagnostic;
+
+    #[test]
+    fn separates_sms_rejection_from_initial_service_outage() {
+        let sms = apple_login_diagnostic("Failed to complete SMS 2FA\nSMS 2FA request failed with http status 403: synthetic response").unwrap();
+        let service = apple_login_diagnostic("Failed to send initial login request\n503 Service Temporarily Unavailable").unwrap();
+        assert!(sms.contains("HTTP 403"));
+        assert!(!sms.contains("synthetic response"));
+        assert!(service.contains("HTTP 503"));
+        assert_eq!(apple_login_diagnostic("Failed to send initial login request\nHTTP 403"), None);
+    }
+}
+
 impl From<Report> for AppError {
     fn from(report: Report) -> Self {
         let report_str = report.to_string();

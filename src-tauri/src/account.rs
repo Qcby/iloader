@@ -213,7 +213,8 @@ async fn login(
                 .set_url(&anisette_url),
         )
         .login(password, Box::new(tfa_closure))
-        .await?;
+        .await
+        .map_err(crate::error::apple_login_error)?;
 
     debug!("Logged in");
 
